@@ -1,0 +1,60 @@
+{
+  "name": "customercapm",
+  "version": "1.0.0",
+  "dependencies": {
+    "@cap-js-community/odata-v2-adapter": "^1.16.2",
+    "@cap-js/hana": "^3",
+    "@sap-cloud-sdk/http-client": "^4.9.1",
+    "@sap-cloud-sdk/resilience": "^4.9.1",
+    "@sap/cds": "^10",
+    "@sap/xssec": "^4"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^3",
+    "@sap/cds-dk": "^10",
+    "cds-plugin-ui5": "^0.17.0",
+    "rimraf": "^5.0.5",
+    "mbt": "^1.2.49"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch-customerapp": "cds watch --open customerapp/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "undeploy": "cf undeploy customercapm --delete-services --delete-service-keys --delete-service-brokers",
+    "build": "rimraf resources mta_archives && mbt build --mtar archive",
+    "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
+    "watch-customerapp_1": "cds watch --open customerapp1/index.html?sap-ui-xx-viewCache=false --livereload false"
+  },
+  "private": true,
+  "cds": {
+    "requires": {
+      "[production]": {
+        "auth": "xsuaa"
+      },
+      "destinations": true,
+      "northwind": {
+        "kind": "odata",
+        "credentials": {
+          "destination": "NorthwWind"
+        }
+      },
+      "auth": {
+        "kind": "xsuaa",
+        "users": {
+          "testUser": {
+            "password": "test@123",
+            "roles": [
+              "Reviewer"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "workspaces": [
+    "app/*"
+  ],
+  "sapux": [
+    "app/customerapp",
+    "app/customerapp_1"
+  ]
+}

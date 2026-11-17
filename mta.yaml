@@ -1,0 +1,121 @@
+_schema-version: 3.3.0
+ID: customercapm
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: customercapm-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: customercapm-db
+  - name: customercapm-destination
+  - name: customercapm-auth
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    instances: 1
+  build-parameters:
+    builder: npm-ci
+- name: customercapm-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: customercapm-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: customercapm-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: customercapm-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - customerapp.zip
+      name: customerapp
+      target-path: resources/
+    - artifacts:
+      - customerapp1.zip
+      name: customerapp1
+      target-path: resources/
+- name: customerapp
+  type: html5
+  path: app/customerapp
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: customerapp1
+  type: html5
+  path: app/customerapp_1
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: customercapm-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: customercapm-destination
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: false
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+    service: destination
+    service-plan: lite
+- name: customercapm-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: customercapm-html5-service
+    service-plan: app-host
+- name: customercapm-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      oauth2-configuration:
+        credential-types:
+        - binding-secret
+        - x509
+      role-collections:
+      - description: generated
+        name: authnticated user (customercapm ${org}-${space})
+        role-template-references:
+        - $XSAPPNAME.authnticated user
+      tenant-mode: dedicated
+      xsappname: customercapm-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production
